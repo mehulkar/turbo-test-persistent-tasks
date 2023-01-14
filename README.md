@@ -1,73 +1,46 @@
-# Turborepo starter
+# Demonstrate persistent tasks dependencies
 
-This is an official npm starter turborepo.
+This repo was generated with `npx create-turbo` and one change was made to `turbo.json` (see commit history).
 
-## What's inside?
+Run `turbo run lint` to see that lint tasks from all workspaces successfully execute.
 
-This turborepo uses [npm](https://www.npmjs.com/) as a package manager. It includes the following packages/apps:
+This works because this config:
 
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `ui`: a stub React component library shared by both `web` and `docs` applications
-- `eslint-config-custom`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `tsconfig`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-npm run build
+```json
+{
+    "lint": {
+        "dependsOn": ["^dev"]
+    }
+}
 ```
 
-### Develop
+means that the `lint` tasks of all workspaces should "depend on" (i.e. execute _after_) the `dev`
+tasks of their package dependencies. In many more words:
 
-To develop all apps and packages, run the following command:
+- `docs` depends on `ui`, `eslint-config-custom`, `tsconfig` packages, so `docs#lint` should execute after `ui#dev`, `eslint-config-custom#dev`, and `tsconfig#dev`.
+- `web` depends on `ui`, `eslint-config-custom`, `tsconfig` packages, so `web#lint` should execute after `ui#dev`, `eslint-config-custom#dev`, and `tsconfig#dev`.
+- `eslint-config-custom` does not depend on any other packages, so `eslint-config-custom#lint` can execute whenever.
+- `tsconfig` does not depend on any other packages, so `tsconfig#lint` can execute whenever.
+- `ui` depends on `eslint-config-custom`, `tsconfig` packages, so `ui#lint` should execute after `eslint-config-custom#dev`, and `tsconfig#dev`.
 
-```
-cd my-turborepo
-npm run dev
-```
+`ui#dev`, `eslint-config-custom#dev`, and `tsconfig#dev` do not exist, so none of the lint tasks
+are actually blocked on a persistent task.
 
-### Remote Caching
+So this config can exeucte without any problems!
 
-Turborepo can use a technique known as [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+## How to create the validation error
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup), then enter the following commands:
+- You could change to this config:
 
-```
-cd my-turborepo
-npx turbo login
-```
+    ```json
+    {
+        "lint": {
+            "dependsOn": ["dev"]
+        }
+    }
+    ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+    This would indicate that `docs#lint` should depend on `docs#dev`, (which _does_ exist),
+    and similarly `web#lint`, should depend on `web#dev`.
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your turborepo:
-
-```
-npx turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turbo.build/repo/docs/core-concepts/monorepos/running-tasks)
-- [Caching](https://turbo.build/repo/docs/core-concepts/caching)
-- [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching)
-- [Filtering](https://turbo.build/repo/docs/core-concepts/monorepos/filtering)
-- [Configuration Options](https://turbo.build/repo/docs/reference/configuration)
-- [CLI Usage](https://turbo.build/repo/docs/reference/command-line-reference)
+- You could also implement a `dev` script in, say `ui`, and it would also cause turbo to throw the validation error.

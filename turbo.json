@@ -6,9 +6,11 @@
       "outputs": ["dist/**", ".next/**"]
     },
     "lint": {
+      "dependsOn": ["^dev"],
       "outputs": []
     },
     "dev": {
+      "persistent": true,
       "cache": false
     }
   }
